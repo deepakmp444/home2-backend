@@ -1,29 +1,34 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const cors = require('cors');
+import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import cors from 'cors';
 
 const app = express();
 const PORT = 5004;
 
-app.use(cors())
-// Serve static files (images) from "public" folder
-app.use('/images', express.static(path.join(__dirname, 'public')));
+// Enable CORS
+app.use(cors());
+
+// Define the folder location (your specified path)
+const folderLocation = "C:\\Users\\sheet\\Downloads\\Desktop\\Documents";
+
+// Serve static files (images) from the specified folder
+app.use('/images', express.static(folderLocation));
 
 // Endpoint to get folder structure
 app.get('/api/folders', (req, res) => {
-    const baseFolder = path.join(__dirname, 'public/Industry');
-    const folders = fs.readdirSync(baseFolder, { withFileTypes: true })
-        .filter(item => item.isDirectory())
+    const folders = fs.readdirSync(folderLocation, { withFileTypes: true })
+        .filter(item => item.isDirectory()) // Filter to keep only directories
         .map(folder => {
-            const folderPath = path.join(baseFolder, folder.name);
-            const images = fs.readdirSync(folderPath).filter(file => /\.(png|jpg|jpeg)$/.test(file));
+            const folderPath = path.join(folderLocation, folder.name);
+            const images = fs.readdirSync(folderPath)
+                .filter(file => /\.(png|jpg|jpeg)$/i.test(file)); // Filter images by extensions
             return {
                 name: folder.name,
-                images: images.map(img => `/images/Industry/${folder.name}/${img}`)
+                images: images.map(img => `/images/${folder.name}/${img}`) // Generate URL for each image
             };
         });
-    res.json({ folders });
+    res.json({ folders }); // Send folder structure as JSON
 });
 
 // Start the server
