@@ -1,5 +1,5 @@
 const express = require('express');
-const fs = require('fs');
+const shell = require('shelljs');
 const path = require('path');
 const cors = require('cors');
 
@@ -7,7 +7,13 @@ const app = express();
 const PORT = 5004;
 
 // Define the external base directory
-const externalBaseDirectory = '/some/external/path';
+const externalBaseDirectory = '/Users/deepakkumar/Documents/Industry';
+
+// Ensure externalBaseDirectory exists
+if (!shell.test('-d', externalBaseDirectory)) {
+    console.error(`Directory does not exist: ${externalBaseDirectory}`);
+    process.exit(1);
+}
 
 // Allow CORS
 app.use(cors());
@@ -17,18 +23,22 @@ app.use('/images', express.static(path.join(externalBaseDirectory)));
 
 // Endpoint to get folder structure
 app.get('/api/folders', (req, res) => {
-    const baseFolder = path.join(externalBaseDirectory, 'Industry');
+    const baseFolder = externalBaseDirectory;
+
     try {
-        const folders = fs.readdirSync(baseFolder, { withFileTypes: true })
-            .filter(item => item.isDirectory())
-            .map(folder => {
-                const folderPath = path.join(baseFolder, folder.name);
-                const images = fs.readdirSync(folderPath).filter(file => /\.(png|jpg|jpeg)$/.test(file));
-                return {
-                    name: folder.name,
-                    images: images.map(img => `/images/Industry/${folder.name}/${img}`)
-                };
-            });
+        // Get all subfolders inside the base folder
+        const folders = shell.ls('-d', path.join(baseFolder, '*/')).map(folderPath => {
+            const folderName = path.basename(folderPath);
+
+            // Get all image files in the folder
+            const imageFiles = shell.ls(path.join(folderPath, '*.{png,jpg,jpeg}'));
+
+            return {
+                name: folderName,
+                images: imageFiles.map(img => `/images/${folderName}/${path.basename(img)}`)
+            };
+        });
+
         res.json({ folders });
     } catch (error) {
         console.error("Error reading folders:", error);
